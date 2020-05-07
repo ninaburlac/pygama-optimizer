@@ -64,14 +64,9 @@ def main():
     ds = pu.get_dataset_from_cmdline(args, f"{local_dir}/meta/runDB.json", f"{local_dir}/meta/calDB.json")
     #pprint(ds.paths)
     
-    d_out = f"{local_dir}/cage"
+    d_out = f"{local_dir}/run{run}"
     try: os.mkdir(d_out)
-    except FileExistsError: print ("Directory '%s' already exists" % d_out)
-    else: print ("Directory '%s' created" % d_out)
-    d_out = f"{d_out}/run{run}"
-    try: os.mkdir(d_out)
-    except FileExistsError: print ("Directory '%s' already exists" % d_out)
-    else: print ("Directory '%s' created" % d_out)
+    except: pass
     
     f_tier1 = f"{d_out}/cage_optimizer_raw.h5"
     f_grid = f"{d_out}/{filters[case]}_optimizer_grid.h5"
