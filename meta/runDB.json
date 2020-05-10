@@ -33,7 +33,7 @@
 	"raw_filename_template":"{file_label}/{runtype}/pgt_run{run:0>4d}_{YYYYmmdd}T{hhmmss}Z_{runtype}_{file_label}_raw.lh5",
 	"ch_groups":{
 	    "g{ch:0>3d}": {
-		"ch_range":[24,24],
+		"ch_range":[60,60],
 		"tb_per_ch":"True",
 		"file_label":"geds"
 	    },

@@ -32,7 +32,7 @@ def main():
     V. D'Andrea
     """
     
-    filters = ['trapE','trapEftp','zacE','trapEcorr','trapEftpcorr','zacEcorr','dplms']    
+    filters = ['trapE','trapEftp','zacE','cuspE','trapEcorr','trapEftpcorr','zacEcorr']    
     
     par = argparse.ArgumentParser(description="pygama dsp optimizer")
     arg, st, sf = par.add_argument, "store_true", "store_false"
@@ -44,7 +44,7 @@ def main():
     arg("-p", "--process", action=st, help="run DSP processing")
     arg("-f", "--fit", action=st, help="fit outputs to peakshape function")
     arg("-t", "--plot", action=st, help="find optimal parameters & make plots")
-    arg("-c", "--case", nargs=1, help="energy filter: 0=trapE, 1=trapEftp, 2=zacE, 3=trapEcorr, 4=trapEftpcorr,5=zacEcorr")
+    arg("-c", "--case", nargs=1, help="energy filter: 0=trapE, 1=trapEftp, 2=zacE, 3=cuspE, 4=trapEcorr, 5=trapEftpcorr,6=zacEcorr")
     arg("-cf", "--compare", nargs=2, help="compare energy filter")
     arg("-v", "--verbose", action=st, help="set verbose mode")
     args = vars(par.parse_args())
@@ -64,7 +64,7 @@ def main():
     ds = pu.get_dataset_from_cmdline(args, f"{local_dir}/meta/runDB.json", f"{local_dir}/meta/calDB.json")
     #pprint(ds.paths)
     
-    d_out = f"{local_dir}/run{run}"
+    d_out = f"{local_dir}/run{run:0>4}"
     try: os.mkdir(d_out)
     except: pass
     
@@ -99,22 +99,30 @@ def set_grid(f_grid,efilter):
     """
     if 'corr' in efilter:
         print("Creation of grid for charge trapping correction")
-        ct_consts = np.linspace(0., 0.05, 6, dtype='float')
+        ct_consts = np.linspace(-0.05, 0., 6, dtype='float')
         lists = [ct_consts]
         prod = list(itertools.product(*lists))
         df = pd.DataFrame(prod, columns=['ct_const']) 
     elif 'trapE' in efilter:
         print("Creation of grid for trap optimization")
-        rises = np.linspace(3, 6, 2, dtype='float')
-        flats = np.linspace(1.5, 3.5, 2, dtype='float')
-        rcs = np.linspace(50, 150, 2, dtype='float')
+        rises = np.linspace(2, 6, 5, dtype='float')
+        flats = np.linspace(2.5, 3.5, 3, dtype='float')
+        rcs = np.linspace(150, 150, 1, dtype='float')
         lists = [rises, flats, rcs]
         prod = list(itertools.product(*lists))
         df = pd.DataFrame(prod, columns=['rise','flat','rc']) 
     elif 'zacE' in efilter:
         print("Creation of grid for ZAC optimization")
-        sigmas = np.linspace(1, 50, 5, dtype='float')
-        flats =  np.linspace(1, 4, 10, dtype='float')
+        sigmas = np.linspace(30, 50, 1, dtype='float')
+        flats =  np.linspace(3, 4, 1, dtype='float')
+        decays =  np.linspace(160, 160, 1, dtype='float')
+        lists = [sigmas, flats, decays]
+        prod = list(itertools.product(*lists))
+        df = pd.DataFrame(prod, columns=['sigma', 'flat','decay'])     
+    elif 'cuspE' in efilter:
+        print("Creation of grid for CUSP optimization")
+        sigmas = np.linspace(1, 50, 10, dtype='float')
+        flats =  np.linspace(3, 4, 1, dtype='float')
         decays =  np.linspace(160, 160, 1, dtype='float')
         lists = [sigmas, flats, decays]
         prod = list(itertools.product(*lists))
@@ -227,8 +235,9 @@ def process_ds(f_grid, f_opt, f_tier1, d_out, efilter):
         proc.add_input_buffer("wf", wf_in, dtype='float32')
         wsize = wf_in.shape[1]
         dt0 = data['waveform']['dt'][0]*0.001
-
-        proc.add_processor(mean_stdev, "wf[0:1000]", "bl", "bl_sig")
+        bl_in = data['baseline'][()]
+        proc.add_input_buffer("bl", bl_in, dtype='float32')
+        #proc.add_processor(mean_stdev, "wf[0:1000]", "bl", "bl_sig")
         proc.add_processor(np.subtract, "wf", "bl", "wf_blsub")
         for i, row in df_grid.iterrows():
             if 'corr' in efilter: ct_const = row
@@ -247,6 +256,12 @@ def process_ds(f_grid, f_opt, f_tier1, d_out, efilter):
                 proc.add_processor(pole_zero, "wf_blsub", decay/dt0, "wf_pz")
                 proc.add_processor(zac_filter(wsize, sigma/dt0, flat/dt0, decay/dt0),"wf", f"wf_zac_{i}(101, f)")
                 proc.add_processor(np.amax, f"wf_zac_{i}", 1, f"zacE_{i}", signature='(n),()->()', types=['fi->f'])
+            if 'cuspE' in efilter:
+                if 'corr' in efilter: sigma, flat, decay = float(df_res['sigma'][idx]), float(df_res['flat'][idx]), float(df_res['decay'][idx])
+                else: sigma, flat, decay = row
+                proc.add_processor(pole_zero, "wf_blsub", decay/dt0, "wf_pz")
+                proc.add_processor(cusp_filter(wsize, sigma/dt0, flat/dt0, decay/dt0),"wf_blsub", f"wf_cusp_{i}(101, f)")
+                proc.add_processor(np.amax, f"wf_cusp_{i}", 1, f"cuspE_{i}", signature='(n),()->()', types=['fi->f'])
             if 'corr' in efilter:
                 proc.add_processor(trap_pickoff, "wf_pz", 1.5*us, 0, "tp_0", "ct_corr")
                 #proc.add_processor(trap_pickoff, "wf_pz", rise*us, flat*us, "tp_0", "ct_corr")
