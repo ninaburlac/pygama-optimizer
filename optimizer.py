@@ -139,7 +139,6 @@ def window_ds(ds, f_tier1):
     
     for ged in range(geds[0],geds[1]+1):
         ged = f"g{ged:0>3d}"
-        if ged != 'g060': continue
         count = 0
         for p, d, files in os.walk(raw_dir):
             for f in files:
