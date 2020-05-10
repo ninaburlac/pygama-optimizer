@@ -104,30 +104,22 @@ def set_grid(f_grid,efilter):
         prod = list(itertools.product(*lists))
         df = pd.DataFrame(prod, columns=['ct_const']) 
     elif 'trapE' in efilter:
-        print("Creation of grid for trap optimization")
-        rises = np.linspace(2, 6, 5, dtype='float')
-        flats = np.linspace(2.5, 3.5, 3, dtype='float')
+        print(f"Creation of grid for {efilter} optimization")
+        rises = np.linspace(2, 6, 1, dtype='float')
+        flats = np.linspace(2.5, 3.5, 1, dtype='float')
         rcs = np.linspace(150, 150, 1, dtype='float')
         lists = [rises, flats, rcs]
         prod = list(itertools.product(*lists))
         df = pd.DataFrame(prod, columns=['rise','flat','rc']) 
-    elif 'zacE' in efilter:
-        print("Creation of grid for ZAC optimization")
-        sigmas = np.linspace(30, 50, 1, dtype='float')
-        flats =  np.linspace(3, 4, 1, dtype='float')
+    elif 'zacE' in efilter or 'cuspE' in efilter:
+        print(f"Creation of grid for {efilter} optimization")
+        sigmas = np.linspace(10, 50, 1, dtype='float')
+        flats =  np.linspace(3.5, 4.5, 1, dtype='float')
         decays =  np.linspace(160, 160, 1, dtype='float')
         lists = [sigmas, flats, decays]
         prod = list(itertools.product(*lists))
         df = pd.DataFrame(prod, columns=['sigma', 'flat','decay'])     
-    elif 'cuspE' in efilter:
-        print("Creation of grid for CUSP optimization")
-        sigmas = np.linspace(1, 50, 10, dtype='float')
-        flats =  np.linspace(3, 4, 1, dtype='float')
-        decays =  np.linspace(160, 160, 1, dtype='float')
-        lists = [sigmas, flats, decays]
-        prod = list(itertools.product(*lists))
-        df = pd.DataFrame(prod, columns=['sigma', 'flat','decay'])     
-    
+        
     print(df)
     df.to_hdf(f_grid, key="pygama_optimization")
     print("Wrote grid file:", f_grid)
@@ -229,14 +221,17 @@ def process_ds(f_grid, f_opt, f_tier1, d_out, efilter):
         #dt = data['waveform']['dt'].nda[0] * unit_parser.parse_unit(data['waveform']['dt'].attrs['units'])
         wf_in = data['waveform']['values'][()]
         dt = data['waveform']['dt'][0] * unit_parser.parse_unit(data['waveform']['dt'].attrs['units'])
+        bl_in = data['baseline'][()] #flashcam baseline values
+        
         # Set up DSP processing chain -- very minimal
         block = 8 #waveforms to process simultaneously
         proc = ProcessingChain(block_width=block, clock_unit=dt, verbosity=False)
         proc.add_input_buffer("wf", wf_in, dtype='float32')
+        proc.add_input_buffer("bl", bl_in, dtype='float32')
+        
         wsize = wf_in.shape[1]
         dt0 = data['waveform']['dt'][0]*0.001
-        bl_in = data['baseline'][()]
-        proc.add_input_buffer("bl", bl_in, dtype='float32')
+        
         #proc.add_processor(mean_stdev, "wf[0:1000]", "bl", "bl_sig")
         proc.add_processor(np.subtract, "wf", "bl", "wf_blsub")
         for i, row in df_grid.iterrows():
@@ -253,13 +248,11 @@ def process_ds(f_grid, f_opt, f_tier1, d_out, efilter):
             if 'zacE' in efilter:
                 if 'corr' in efilter: sigma, flat, decay = float(df_res['sigma'][idx]), float(df_res['flat'][idx]), float(df_res['decay'][idx])
                 else: sigma, flat, decay = row
-                proc.add_processor(pole_zero, "wf_blsub", decay/dt0, "wf_pz")
                 proc.add_processor(zac_filter(wsize, sigma/dt0, flat/dt0, decay/dt0),"wf", f"wf_zac_{i}(101, f)")
                 proc.add_processor(np.amax, f"wf_zac_{i}", 1, f"zacE_{i}", signature='(n),()->()', types=['fi->f'])
             if 'cuspE' in efilter:
                 if 'corr' in efilter: sigma, flat, decay = float(df_res['sigma'][idx]), float(df_res['flat'][idx]), float(df_res['decay'][idx])
                 else: sigma, flat, decay = row
-                proc.add_processor(pole_zero, "wf_blsub", decay/dt0, "wf_pz")
                 proc.add_processor(cusp_filter(wsize, sigma/dt0, flat/dt0, decay/dt0),"wf_blsub", f"wf_cusp_{i}(101, f)")
                 proc.add_processor(np.amax, f"wf_cusp_{i}", 1, f"cuspE_{i}", signature='(n),()->()', types=['fi->f'])
             if 'corr' in efilter:
@@ -393,14 +386,16 @@ def plot_fwhm(f_grid,f_opt,d_out,efilter, verbose=False):
     df_grid = pd.read_hdf(f_grid)
     f_res = f"{d_out}/{efilter}_results.h5"
     if 'trapE' in efilter: df = pd.DataFrame(columns=['ged','rise','flat','rc','fwhm','fwhmerr'])
-    if efilter == 'zacE': df = pd.DataFrame(columns=['ged','sigma','flat','decay','fwhm','fwhmerr'])
+    if efilter == 'zacE' or efilter == 'cuspE': df = pd.DataFrame(columns=['ged','sigma','flat','decay','fwhm','fwhmerr'])
     f = h5py.File(f_opt,'r')
     for chn, ged in enumerate(f.keys()):
         d_det = f"{d_out}/{ged}"
         try: os.mkdir(d_det)
-        except FileExistsError: pass
-        else: print ("Directory '%s' created" % d_det)
-
+        except: pass
+        d_det = f"{d_det}/{efilter}"
+        try: os.mkdir(d_det)
+        except: pass
+        
         data =  f[ged]['data']
         # find fwhm minimum values
         df_grid = df_grid.loc[(df_grid[f"rchi2_{ged}"]<20)&(df_grid[f"fwhm_{ged}"]>0)]
@@ -438,7 +433,7 @@ def plot_fwhm(f_grid,f_opt,d_out,efilter, verbose=False):
         plt.savefig(f"{d_det}/Fit_{ged}-{efilter}.pdf")
         plt.cla()
         #except: continue
-        if efilter=='zacE':
+        if efilter=='zacE' or efilter=='cuspE':
             #try:
             sigma, flat, decay = df_min[:3]
             results = [ged, f'{sigma:.2f}', f'{flat:.2f}', f'{decay:.2f}', f'{fwhm:.2f}', f'{fwhmerr:.2f}']
@@ -448,7 +443,7 @@ def plot_fwhm(f_grid,f_opt,d_out,efilter, verbose=False):
             plt.errorbar(x,y,err,fmt='o')
             plt.xlabel("Sigma Cusp ($\mu$s)", ha='right', x=1)
             plt.ylabel(r"FWHM (keV)", ha='right', y=1)
-            plt.savefig(f"{d_det}/FWHM_vs_Sigma_{ged}-zac.pdf")
+            plt.savefig(f"{d_det}/FWHM_vs_Sigma_{ged}-{efilter}.pdf")
             plt.cla()
             # 2. vary the flat time
             df_flat = df_grid.loc[(df_grid.sigma==sigma)&(df_grid.decay==decay)]
@@ -456,7 +451,7 @@ def plot_fwhm(f_grid,f_opt,d_out,efilter, verbose=False):
             plt.errorbar(x,y,err,fmt='o')
             plt.xlabel("Flat Top ($\mu$s)", ha='right', x=1)
             plt.ylabel("FWHM (keV)", ha='right', y=1)
-            plt.savefig(f"{d_det}/FWHM_vs_Flat_{ged}-zac.pdf")
+            plt.savefig(f"{d_det}/FWHM_vs_Flat_{ged}-{efilter}.pdf")
             plt.cla() 
             # 3. vary the rc constant
             df_decay = df_grid.loc[(df_grid.sigma==sigma)&(df_grid.flat==flat)]
@@ -464,7 +459,7 @@ def plot_fwhm(f_grid,f_opt,d_out,efilter, verbose=False):
             plt.errorbar(x,y,err,fmt='o')
             plt.xlabel("Decay constant ($\mu$s)", ha='right', x=1)
             plt.ylabel(r"FWHM (keV)", ha='right', y=1)
-            plt.savefig(f"{d_det}/FWHM_vs_Decay_{ged}-zac.pdf")
+            plt.savefig(f"{d_det}/FWHM_vs_Decay_{ged}-{efilter}.pdf")
             plt.cla()
             #except:
             #print("")
@@ -479,7 +474,7 @@ def plot_fwhm(f_grid,f_opt,d_out,efilter, verbose=False):
             plt.xlabel("Ramp time ($\mu$s)", ha='right', x=1)
             plt.ylabel(r"FWHM (kev)", ha='right', y=1)
             # plt.ylabel(r"FWHM", ha='right', y=1)
-            plt.savefig(f"{d_det}/FWHM_vs_Rise_{ged}-trap.pdf")
+            plt.savefig(f"{d_det}/FWHM_vs_Rise_{ged}-{efilter}.pdf")
             plt.cla()
             
             # 2. vary the flat time
@@ -489,7 +484,7 @@ def plot_fwhm(f_grid,f_opt,d_out,efilter, verbose=False):
             plt.errorbar(x,y,err,fmt='o')
             plt.xlabel("Flat time ($\mu$s)", ha='right', x=1)
             plt.ylabel("FWHM (keV)", ha='right', y=1)
-            plt.savefig(f"{d_det}/FWHM_vs_Flat_{ged}-trap.pdf")
+            plt.savefig(f"{d_det}/FWHM_vs_Flat_{ged}-{efilter}.pdf")
             plt.cla() 
             # 3. vary the rc constant
             df_rc = df_grid.loc[(df_grid.rise==rise)&(df_grid.flat==flat)]
@@ -498,7 +493,7 @@ def plot_fwhm(f_grid,f_opt,d_out,efilter, verbose=False):
             plt.errorbar(x,y,err,fmt='o')
             plt.xlabel("RC constant ($\mu$s)", ha='right', x=1)
             plt.ylabel(r"FWHM (keV)", ha='right', y=1)
-            plt.savefig(f"{d_det}/FWHM_vs_RC_{ged}-trap.pdf")
+            plt.savefig(f"{d_det}/FWHM_vs_RC_{ged}-{efilter}.pdf")
             plt.cla()
         df.loc[chn] = results
     print("Results file:",f_res)
