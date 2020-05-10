@@ -1,0 +1,1 @@
+qsub -P short -N pgttest -e localhost:/lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/file.err -o localhost:/lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/file.out /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/script.sh
