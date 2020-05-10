@@ -1,1 +1,0 @@
-qsub -P short -N pgttest -e localhost:/lfs/l1/legend/users/dandrea/pygama/pgt/file.err -o localhost:/lfs/l1/legend/users/dandrea/pygama/pgt/file.out /lfs/l1/legend/users/dandrea/pygama/pgt/script.sh
