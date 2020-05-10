@@ -16,7 +16,7 @@ unset __conda_setup
 
 #python /lfs/l1/legend/users/dandrea/pygama/pgt/processing.py -r 117 -r2d -o > /lfs/l1/legend/users/dandrea/pygama/pgt/process_raw_to_dsp.out
 
-python /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer.py -r 117 -c 0 -w -g -p -f -t -d /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer > /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer-trap.out
+python /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer.py -r 117 -c 0 -g -p -f -t -d /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer > /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer-trap.out
 python /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer.py -r 117 -c 1 -g -p -f -t -d /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer > /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer-trapftp.out
 python /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer.py -r 117 -c 2 -g -p -f -t -d /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer > /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer-zac.out
 python /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer.py -r 117 -c 3 -g -p -f -t -d /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer > /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer-cusp.out
