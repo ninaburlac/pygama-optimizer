@@ -1,6 +1,11 @@
 {
+    "daq_dir":"/lfs/l1/legend/users/dandrea/pygama/pgt/raw/",
     "raw_dir":"/lfs/l1/legend/analysis/pygama/pgt/tier1/run0002-fc-daq-test/",
+    "dsp_dir":"/lfs/l1/legend/users/dandrea/pygama/pgt/tier2/",
+    
+    "daq_prefix":"",
     "raw_prefix":"raw",
+    "dsp_prefix":"dsp",
     "suffix":"lh5",
     
     "digitizer":"FlashCam",
@@ -27,7 +32,7 @@
 	"raw_filename_template":"{file_label}/{runtype}/pgt_run{run:0>4d}_{YYYYmmdd}T{hhmmss}Z_{runtype}_{file_label}_raw.lh5",
 	"ch_groups":{
 	    "g{ch:0>3d}": {
-		"ch_range":[24,24],
+		"ch_range":[24,64],
 		"tb_per_ch":"True",
 		"file_label":"geds"
 	    },

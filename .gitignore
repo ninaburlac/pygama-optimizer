@@ -1,0 +1,5 @@
+# New additions go at the top!
+*.out
+*.err
+*_raw.h5
+*~

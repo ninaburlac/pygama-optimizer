@@ -105,17 +105,17 @@ def set_grid(f_grid,efilter):
         df = pd.DataFrame(prod, columns=['ct_const']) 
     elif 'trapE' in efilter:
         print(f"Creation of grid for {efilter} optimization")
-        rises = np.linspace(2, 6, 1, dtype='float')
-        flats = np.linspace(2.5, 3.5, 1, dtype='float')
-        rcs = np.linspace(150, 150, 1, dtype='float')
+        rises = np.linspace(1, 10, 10, dtype='float')
+        flats = np.linspace(0.5, 4.5, 5, dtype='float')
+        rcs = np.linspace(100, 150, 2, dtype='float')
         lists = [rises, flats, rcs]
         prod = list(itertools.product(*lists))
         df = pd.DataFrame(prod, columns=['rise','flat','rc']) 
     elif 'zacE' in efilter or 'cuspE' in efilter:
         print(f"Creation of grid for {efilter} optimization")
-        sigmas = np.linspace(10, 50, 1, dtype='float')
-        flats =  np.linspace(3.5, 4.5, 1, dtype='float')
-        decays =  np.linspace(160, 160, 1, dtype='float')
+        sigmas = np.linspace(1, 50, 10, dtype='float')
+        flats =  np.linspace(0.5, 4.5, 5, dtype='float')
+        decays =  np.linspace(100, 150, 2, dtype='float')
         lists = [sigmas, flats, decays]
         prod = list(itertools.product(*lists))
         df = pd.DataFrame(prod, columns=['sigma', 'flat','decay'])     
