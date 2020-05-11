@@ -498,6 +498,15 @@ def plot_fwhm(f_grid,f_opt,d_out,efilter, verbose=False):
     print("Results file:",f_res)
     df.to_hdf(f_res, key='results',mode='w')
     print(df)
+    dets = range(len(df['fwhm']))
+    fwhm = np.array([float(df['fwhm'][i]) for i in dets])
+    fwhm_err = np.array([float(df['fwhmerr'][i]) for i in dets])
+    plt.cla()
+    plt.errorbar(dets,fwhm,fwhm_err,fmt='o',c='red',label=f'{efilter} filter')
+    plt.xlabel("detector number", ha='right', x=1)
+    plt.ylabel("FWHM (keV)", ha='right', y=1)
+    plt.legend()
+    plt.savefig(f"{d_out}/FWHM_{efilter}.pdf")
 
 def compare_fwhm( d_out, efilter1, efilter2, verbose=False):
     print(f'Comparing FWHM using {efilter1} and {efilter2} filters')
