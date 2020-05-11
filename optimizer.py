@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os
+import os, json
 import argparse
 import time
 import pandas as pd
@@ -61,7 +61,9 @@ def main():
         print("Filter Case not valid")
         return
 
-    ds = pu.get_dataset_from_cmdline(args, f"{local_dir}/meta/runDB.json", f"{local_dir}/meta/calDB.json")
+    #ds = pu.get_dataset_from_cmdline(args, f"{local_dir}/meta/runDB.json", f"{local_dir}/meta/calDB.json")
+    with open(f"{local_dir}/meta/runDB.json") as frun:
+        config = json.load(frun)
     #pprint(ds.paths)
     
     d_out = f"{local_dir}/run{run:0>4}"
@@ -76,7 +78,8 @@ def main():
     if args["grid"]: set_grid(f_grid,filters[case])
     
     # generate a small single-peak file w/ uncalibrated energy to reanalyze
-    if args["window"]: window_ds(ds, f_tier1)
+    #if args["window"]: window_ds(ds, f_tier1)
+    if args["window"]: window_ds(config, f_tier1)
     
     # create a file with DataFrames for each set of parameters
     if args["process"]: process_ds(f_grid, f_opt, f_tier1, d_out, filters[case])
@@ -111,7 +114,7 @@ def set_grid(f_grid,efilter):
         print(f"Creation of grid for {efilter} optimization")
         rises = np.linspace(1, 10, 10, dtype='float')
         flats = np.linspace(0.5, 4.5, 5, dtype='float')
-        rcs = np.linspace(150, 150, 1, dtype='float')
+        rcs = np.linspace(500, 500, 1, dtype='float')
         lists = [rises, flats, rcs]
         prod = list(itertools.product(*lists))
         df = pd.DataFrame(prod, columns=['rise','flat','rc']) 
@@ -119,7 +122,7 @@ def set_grid(f_grid,efilter):
         print(f"Creation of grid for {efilter} optimization")
         sigmas = np.linspace(1, 50, 10, dtype='float')
         flats =  np.linspace(0.5, 4.5, 5, dtype='float')
-        decays =  np.linspace(150, 150, 1, dtype='float')
+        decays =  np.linspace(500, 500, 1, dtype='float')
         lists = [sigmas, flats, decays]
         prod = list(itertools.product(*lists))
         df = pd.DataFrame(prod, columns=['sigma', 'flat','decay'])     
@@ -129,16 +132,19 @@ def set_grid(f_grid,efilter):
     print("Wrote grid file:", f_grid)
     
 
-def window_ds(ds, f_tier1):
+#def window_ds(ds, f_tier1):
+def window_ds(config, f_tier1):
     """
     Take a DataSet and window it so that the output file only contains 
     events near the calibration peak at 2614.5 keV.
     """
     print("Creating windowed raw file:",f_tier1)
     f_win = h5py.File(f_tier1, 'w')
-    
-    raw_dir = ds.config["raw_dir"]
-    geds = ds.config["daq_to_raw"]["ch_groups"]["g{ch:0>3d}"]["ch_range"]
+
+    #raw_dir = ds.config["raw_dir"]
+    #geds = ds.config["daq_to_raw"]["ch_groups"]["g{ch:0>3d}"]["ch_range"]
+    raw_dir = config["raw_dir"]
+    geds = config["daq_to_raw"]["ch_groups"]["g{ch:0>3d}"]["ch_range"]
     cols = ['energy','baseline','ievt','numtraces','timestamp','wf_max','wf_std','waveform/values','waveform/dt']
     
     for ged in range(geds[0],geds[1]+1):
@@ -150,7 +156,7 @@ def window_ds(ds, f_tier1):
                     print("Opening raw file:",f)
                     f_raw = h5py.File(f"{raw_dir}/{f}",'r')
                     if count == 0:
-                        cdate, ctime = f.split('run')[-1].split('-')[1], f.split('run')[-1].split('-')[2]
+                        #cdate, ctime = f.split('run')[-1].split('-')[1], f.split('run')[-1].split('-')[2]
                         dsets = [ f_raw[ged]['raw'][col][()]  for col in cols ]
                     else:
                         for i, col in enumerate(cols): dsets[i] = np.append(dsets[i],f_raw[ged]['raw'][col][()],axis=0)
@@ -160,8 +166,8 @@ def window_ds(ds, f_tier1):
         energies = dsets[0]
         maxe = np.amax(energies)
         h, b, v = ph.get_hist(energies, bins=3500, range=(maxe/4,maxe))
-        xp = b[np.where(h > h.max()*0.1)][-1]
-        h, b = h[np.where(b < xp-200)], b[np.where(b < xp-200)]
+        #xp = b[np.where(h > h.max()*0.1)][-1]
+        #h, b = h[np.where(b < xp-200)], b[np.where(b < xp-200)]
         bin_max = b[np.where(h == h.max())][0]
         min_ene = int(bin_max*0.95)
         max_ene = int(bin_max*1.05)
