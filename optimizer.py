@@ -150,39 +150,41 @@ def window_ds(config, f_tier1):
     for ged in range(geds[0],geds[1]+1):
         ged = f"g{ged:0>3d}"
         count = 0
-        for p, d, files in os.walk(raw_dir):
-            for f in files:
-                if (f.endswith(".lh5")) & ("calib" in f):
-                    print("Opening raw file:",f)
-                    f_raw = h5py.File(f"{raw_dir}/{f}",'r')
-                    if count == 0:
-                        #cdate, ctime = f.split('run')[-1].split('-')[1], f.split('run')[-1].split('-')[2]
-                        dsets = [ f_raw[ged]['raw'][col][()]  for col in cols ]
-                    else:
-                        for i, col in enumerate(cols): dsets[i] = np.append(dsets[i],f_raw[ged]['raw'][col][()],axis=0)
-                    count += 1
+        try:
+            for p, d, files in os.walk(raw_dir):
+                for f in files:
+                    if (f.endswith(".lh5")) & ("calib" in f):
+                        print("Opening raw file:",f)
+                        f_raw = h5py.File(f"{raw_dir}/{f}",'r')
+                        if count == 0:
+                            #cdate, ctime = f.split('run')[-1].split('-')[1], f.split('run')[-1].split('-')[2]
+                            dsets = [ f_raw[ged]['raw'][col][()]  for col in cols ]
+                        else:
+                            for i, col in enumerate(cols): dsets[i] = np.append(dsets[i],f_raw[ged]['raw'][col][()],axis=0)
+                        count += 1
         
-        # search for 2.6 MeV peak
-        energies = dsets[0]
-        maxe = np.amax(energies)
-        h, b, v = ph.get_hist(energies, bins=3500, range=(maxe/4,maxe))
-        #xp = b[np.where(h > h.max()*0.1)][-1]
-        #h, b = h[np.where(b < xp-200)], b[np.where(b < xp-200)]
-        bin_max = b[np.where(h == h.max())][0]
-        min_ene = int(bin_max*0.95)
-        max_ene = int(bin_max*1.05)
-        hist, bins, var = ph.get_hist(energies, bins=500, range=(min_ene, max_ene))
-        print(ged,"Raw energy max",maxe,"histogram max",h.max(),"at",bin_max )
+            # search for 2.6 MeV peak
+            energies = dsets[0]
+            maxe = np.amax(energies)
+            h, b, v = ph.get_hist(energies, bins=3500, range=(maxe/4,maxe))
+            #xp = b[np.where(h > h.max()*0.1)][-1]
+            #h, b = h[np.where(b < xp-200)], b[np.where(b < xp-200)]
+            bin_max = b[np.where(h == h.max())][0]
+            min_ene = int(bin_max*0.95)
+            max_ene = int(bin_max*1.05)
+            hist, bins, var = ph.get_hist(energies, bins=500, range=(min_ene, max_ene))
+            print(ged,"Raw energy max",maxe,"histogram max",h.max(),"at",bin_max )
+            
+            # windowing
+            for i, col in enumerate(cols):
+                dsets[i] = dsets[i][(energies>min_ene) & (energies<max_ene)]
+                d_dt = f_win.create_dataset(ged+"/raw/"+col,dtype='f',data=dsets[i])
+                d_dt.attrs['units'] = 'ns'
         
-        # windowing
-        for i, col in enumerate(cols):
-            dsets[i] = dsets[i][(energies>min_ene) & (energies<max_ene)]
-            d_dt = f_win.create_dataset(ged+"/raw/"+col,dtype='f',data=dsets[i])
-            d_dt.attrs['units'] = 'ns'
-        
-        f_win.attrs['datatype'] = 'table{cols}'
-        print("Created datasets",ged+"/raw")
-        
+            f_win.attrs['datatype'] = 'table{cols}'
+            print("Created dataset",ged+"/raw")
+        except:
+            print("Dataset not created for",ged)
     f_win.close()        
     print("wrote file:", f_tier1)
     
