@@ -541,6 +541,7 @@ def compare_fwhm( d_out, efilter1, efilter2, efilter3, verbose=False):
     plt.figure(2)
     plt.cla()
     plt.errorbar(dets,fwhm_diff,fwhm_diff_err,fmt='o',c='green',label=f'FWHM {efilter1} - {efilter2}')
+    plt.axhline(0, c='black', linestyle=":")
     plt.xlabel("detector number", ha='right', x=1)
     plt.ylabel("FWHM difference (%)", ha='right', y=1)
     plt.legend()
