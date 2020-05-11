@@ -45,7 +45,7 @@ def main():
     arg("-f", "--fit", action=st, help="fit outputs to peakshape function")
     arg("-t", "--plot", action=st, help="find optimal parameters & make plots")
     arg("-c", "--case", nargs=1, help="energy filter: 0=trapE, 1=trapEftp, 2=zacE, 3=cuspE, 4=trapEcorr, 5=trapEftpcorr,6=zacEcorr")
-    arg("-cf", "--compare", nargs=2, help="compare energy filter")
+    arg("-cf", "--compare", nargs='*', help="compare energy filter")
     arg("-v", "--verbose", action=st, help="set verbose mode")
     args = vars(par.parse_args())
     
@@ -89,8 +89,12 @@ def main():
 
     # compare fwhm results
     if args["compare"]:
-        case1, case2 = int(args["compare"][0]), int(args["compare"][1])
-        compare_fwhm(d_out,filters[case1],filters[case2],verbose=args["verbose"])
+        filter1, filter2 = filters[int(args["compare"][0])], filters[int(args["compare"][1])]
+        try:
+            filter3 = filters[int(args["compare"][2])]
+        except:
+            filter3 = 0;
+        compare_fwhm(d_out,filter1,filter2,filter3,verbose=args["verbose"])
     
     
 def set_grid(f_grid,efilter):
@@ -508,7 +512,7 @@ def plot_fwhm(f_grid,f_opt,d_out,efilter, verbose=False):
     plt.legend()
     plt.savefig(f"{d_out}/FWHM_{efilter}.pdf")
 
-def compare_fwhm( d_out, efilter1, efilter2, verbose=False):
+def compare_fwhm( d_out, efilter1, efilter2, efilter3, verbose=False):
     print(f'Comparing FWHM using {efilter1} and {efilter2} filters')
     df_1 = pd.read_hdf(f'{d_out}/{efilter1}_results.h5',key='results')
     df_2 = pd.read_hdf(f'{d_out}/{efilter2}_results.h5',key='results')
@@ -522,14 +526,21 @@ def compare_fwhm( d_out, efilter1, efilter2, verbose=False):
     plt.figure(1)
     plt.errorbar(dets,fwhm_1,fwhm_1_err,fmt='o',c='red',label=f'{efilter1} filter')
     plt.errorbar(dets,fwhm_2,fwhm_2_err,fmt='o',c='blue',label=f'{efilter2} filter')
+    if efilter3 is not 0:
+        df_3 = pd.read_hdf(f'{d_out}/{efilter3}_results.h5',key='results')
+        fwhm_3 = np.array([float(df_3['fwhm'][i]) for i in dets])
+        fwhm_3_err = np.array([float(df_3['fwhmerr'][i]) for i in dets])
+        fwhm_2_diff = 100*(fwhm_1 - fwhm_3)/fwhm_1
+        fwhm_2_diff_err =  100*np.sqrt(np.square(fwhm_1_err)  + np.square(fwhm_3_err) )/fwhm_1
+        plt.errorbar(dets,fwhm_3,fwhm_3_err,fmt='o',c='green',label=f'{efilter3} filter')
     plt.xlabel("detector number", ha='right', x=1)
     plt.ylabel("FWHM (keV)", ha='right', y=1)
     plt.legend()
-    plt.savefig(f"{d_out}/FWHM_compare_{efilter1}-{efilter2}.pdf")
+    plt.savefig(f"{d_out}/FWHM_compare_{efilter1}-{efilter2}-{efilter3}.pdf")
     if verbose: plt.show(block=False)
     plt.figure(2)
     plt.cla()
-    plt.errorbar(dets,fwhm_diff,fwhm_diff_err,fmt='o',c='green',label='FWHM difference')
+    plt.errorbar(dets,fwhm_diff,fwhm_diff_err,fmt='o',c='green',label=f'FWHM {efilter1} - {efilter2}')
     plt.xlabel("detector number", ha='right', x=1)
     plt.ylabel("FWHM difference (%)", ha='right', y=1)
     plt.legend()
