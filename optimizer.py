@@ -32,7 +32,7 @@ def main():
     V. D'Andrea
     """
     
-    filters = ['trapE','trapEftp','zacE','cuspE','trapEcorr','trapEftpcorr','zacEcorr']    
+    filters = ['trapE','trapEftp','zacE','cuspE','trapEcorr','trapEftpcorr','zacEcorr','dplms-old','dplms-all-single','dplms-cut-common','dplms-cut-single','dplms-new-single']    
     
     par = argparse.ArgumentParser(description="pygama dsp optimizer")
     arg, st, sf = par.add_argument, "store_true", "store_false"
@@ -524,7 +524,10 @@ def compare_fwhm( d_out, efilter1, efilter2, efilter3, verbose=False):
     print(f'Comparing FWHM using {efilter1} and {efilter2} filters')
     df_1 = pd.read_hdf(f'{d_out}/{efilter1}_results.h5',key='results')
     df_2 = pd.read_hdf(f'{d_out}/{efilter2}_results.h5',key='results')
+    print(df_1)
+    print(df_2)
     dets = range(len(df_1['fwhm']))
+    geds = np.array([int(df_1['ged'][i].split("g")[-1]) for i in dets])
     fwhm_1 = np.array([float(df_1['fwhm'][i]) for i in dets])
     fwhm_1_err = np.array([float(df_1['fwhmerr'][i]) for i in dets])
     fwhm_2 = np.array([float(df_2['fwhm'][i]) for i in dets])
@@ -532,15 +535,16 @@ def compare_fwhm( d_out, efilter1, efilter2, efilter3, verbose=False):
     fwhm_diff = 100*(fwhm_1 - fwhm_2)/fwhm_1
     fwhm_diff_err =  100*np.sqrt(np.square(fwhm_1_err)  + np.square(fwhm_2_err) )/fwhm_1
     plt.figure(1)
-    plt.errorbar(dets,fwhm_1,fwhm_1_err,fmt='o',c='red',label=f'{efilter1} filter')
-    plt.errorbar(dets,fwhm_2,fwhm_2_err,fmt='o',c='blue',label=f'{efilter2} filter')
+    plt.errorbar(geds,fwhm_1,fwhm_1_err,fmt='o',c='red',label=f'{efilter1} filter')
+    plt.errorbar(geds,fwhm_2,fwhm_2_err,fmt='o',c='blue',label=f'{efilter2} filter')
     if efilter3 is not 0:
         df_3 = pd.read_hdf(f'{d_out}/{efilter3}_results.h5',key='results')
+        print(df_3)
         fwhm_3 = np.array([float(df_3['fwhm'][i]) for i in dets])
         fwhm_3_err = np.array([float(df_3['fwhmerr'][i]) for i in dets])
         fwhm_2_diff = 100*(fwhm_1 - fwhm_3)/fwhm_1
         fwhm_2_diff_err =  100*np.sqrt(np.square(fwhm_1_err)  + np.square(fwhm_3_err) )/fwhm_1
-        plt.errorbar(dets,fwhm_3,fwhm_3_err,fmt='o',c='green',label=f'{efilter3} filter')
+        plt.errorbar(geds,fwhm_3,fwhm_3_err,fmt='o',c='green',label=f'{efilter3} filter')
     plt.xlabel("detector number", ha='right', x=1)
     plt.ylabel("FWHM (keV)", ha='right', y=1)
     plt.legend()
@@ -548,7 +552,7 @@ def compare_fwhm( d_out, efilter1, efilter2, efilter3, verbose=False):
     if verbose: plt.show(block=False)
     plt.figure(2)
     plt.cla()
-    plt.errorbar(dets,fwhm_diff,fwhm_diff_err,fmt='o',c='green',label=f'FWHM {efilter1} - {efilter2}')
+    plt.errorbar(geds,fwhm_diff,fwhm_diff_err,fmt='o',c='green',label=f'FWHM {efilter1} - {efilter2}')
     plt.axhline(0, c='black', linestyle=":")
     plt.xlabel("detector number", ha='right', x=1)
     plt.ylabel("FWHM difference (%)", ha='right', y=1)
