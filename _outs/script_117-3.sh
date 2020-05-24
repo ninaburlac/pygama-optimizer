@@ -1,3 +1,4 @@
+#!/bin/sh
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 __conda_setup="$('/lfs/l1/legend/users/dandrea/software/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
@@ -13,5 +14,8 @@ fi
 unset __conda_setup
 # <<< conda initialize <<<
 
-python /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer.py -r 18 -c 3 -g -p -f -t -d /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer > /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer-cusp.out
+source /lfs/l1/legend/users/dandrea/zac/MJsetup.sh
+
+
+python /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer.py -r 117 -c 3 -g -p -f -t -d /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer > /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/_outs/optimizer_117_3.out
 

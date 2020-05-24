@@ -152,11 +152,13 @@ def window_ds(config, f_tier1, run):
         count = 0
         try:
             for p, d, files in os.walk(raw_dir):
-                for f in files:
-                    if (f.endswith(".lh5")) & ("calib" in f):
+                d.sort()
+                for f in sorted(files):
+                    if (f.endswith(".lh5")) & ("calib_raw" in f):
                         print("Opening raw file:",f)
                         f_raw = h5py.File(f"{raw_dir}/{f}",'r')
-                        if count == 0:
+                        if count == 20: break
+                        elif count == 0:
                             #cdate, ctime = f.split('run')[-1].split('-')[1], f.split('run')[-1].split('-')[2]
                             dsets = [ f_raw[ged]['raw'][col][()]  for col in cols ]
                         else:
@@ -167,7 +169,7 @@ def window_ds(config, f_tier1, run):
             energies = dsets[0]
             maxe = np.amax(energies)
             h, b, v = ph.get_hist(energies, bins=3500, range=(maxe/4,maxe))
-            if int(run) is 117:
+            if int(run) is 116 or 117:
                 print("run",run,"remove pulser from spectrum")
                 xp = b[np.where(h > h.max()*0.1)][-1]
                 h, b = h[np.where(b < xp-200)], b[np.where(b < xp-200)]
