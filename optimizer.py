@@ -32,7 +32,7 @@ def main():
     V. D'Andrea
     """
     
-    filters = ['trapE','trapEftp','zacE','cuspE','trapEcorr','trapEftpcorr','zacEcorr','dplms-old','dplms-all-single','dplms-cut-common','dplms-cut-single','dplms-new-single']    
+    filters = ['trapE','trapEftp','zacE','cuspE','trapEcorr','trapEftpcorr','zacEcorr','dplms']
     
     par = argparse.ArgumentParser(description="pygama dsp optimizer")
     arg, st, sf = par.add_argument, "store_true", "store_false"
@@ -44,7 +44,7 @@ def main():
     arg("-p", "--process", action=st, help="run DSP processing")
     arg("-f", "--fit", action=st, help="fit outputs to peakshape function")
     arg("-t", "--plot", action=st, help="find optimal parameters & make plots")
-    arg("-c", "--case", nargs=1, help="energy filter: 0=trapE, 1=trapEftp, 2=zacE, 3=cuspE, 4=trapEcorr, 5=trapEftpcorr,6=zacEcorr")
+    arg("-c", "--case", nargs=1, help="energy filter: 0=trapE, 1=trapEftp, 2=zacE, 3=cuspE, 4=trapEcorr")
     arg("-cf", "--compare", nargs='*', help="compare energy filter")
     arg("-v", "--verbose", action=st, help="set verbose mode")
     args = vars(par.parse_args())
@@ -62,7 +62,7 @@ def main():
         return
 
     #ds = pu.get_dataset_from_cmdline(args, f"{local_dir}/meta/runDB.json", f"{local_dir}/meta/calDB.json")
-    with open(f"{local_dir}/meta/runDB.json") as frun:
+    with open(f"{local_dir}/meta/runDB_run{run:0>4}.json") as frun:
         config = json.load(frun)
     #pprint(ds.paths)
     
@@ -79,7 +79,7 @@ def main():
     
     # generate a small single-peak file w/ uncalibrated energy to reanalyze
     #if args["window"]: window_ds(ds, f_tier1)
-    if args["window"]: window_ds(config, f_tier1)
+    if args["window"]: window_ds(config, f_tier1, run)
     
     # create a file with DataFrames for each set of parameters
     if args["process"]: process_ds(f_grid, f_opt, f_tier1, d_out, filters[case])
@@ -112,17 +112,17 @@ def set_grid(f_grid,efilter):
         df = pd.DataFrame(prod, columns=['ct_const']) 
     elif 'trapE' in efilter:
         print(f"Creation of grid for {efilter} optimization")
-        rises = np.linspace(1, 10, 10, dtype='float')
+        rises = np.linspace(1, 20, 20, dtype='float')
         flats = np.linspace(0.5, 4.5, 5, dtype='float')
-        rcs = np.linspace(600, 1000, 3, dtype='float')
+        rcs = np.linspace(150, 150, 1, dtype='float')
         lists = [rises, flats, rcs]
         prod = list(itertools.product(*lists))
         df = pd.DataFrame(prod, columns=['rise','flat','rc']) 
     elif 'zacE' in efilter or 'cuspE' in efilter:
         print(f"Creation of grid for {efilter} optimization")
-        sigmas = np.linspace(1, 50, 10, dtype='float')
+        sigmas = np.linspace(1, 40, 20, dtype='float')
         flats =  np.linspace(0.5, 4.5, 5, dtype='float')
-        decays =  np.linspace(600, 1000, 3, dtype='float')
+        decays =  np.linspace(150, 150, 1, dtype='float')
         lists = [sigmas, flats, decays]
         prod = list(itertools.product(*lists))
         df = pd.DataFrame(prod, columns=['sigma', 'flat','decay'])     
@@ -133,7 +133,7 @@ def set_grid(f_grid,efilter):
     
 
 #def window_ds(ds, f_tier1):
-def window_ds(config, f_tier1):
+def window_ds(config, f_tier1, run):
     """
     Take a DataSet and window it so that the output file only contains 
     events near the calibration peak at 2614.5 keV.
@@ -143,7 +143,7 @@ def window_ds(config, f_tier1):
 
     #raw_dir = ds.config["raw_dir"]
     #geds = ds.config["daq_to_raw"]["ch_groups"]["g{ch:0>3d}"]["ch_range"]
-    raw_dir = config["raw_dir"]
+    raw_dir = config["cal_dir"]
     geds = config["daq_to_raw"]["ch_groups"]["g{ch:0>3d}"]["ch_range"]
     cols = ['energy','baseline','ievt','numtraces','timestamp','wf_max','wf_std','waveform/values','waveform/dt']
     
@@ -167,8 +167,10 @@ def window_ds(config, f_tier1):
             energies = dsets[0]
             maxe = np.amax(energies)
             h, b, v = ph.get_hist(energies, bins=3500, range=(maxe/4,maxe))
-            #xp = b[np.where(h > h.max()*0.1)][-1]
-            #h, b = h[np.where(b < xp-200)], b[np.where(b < xp-200)]
+            if int(run) is 117:
+                print("run",run,"remove pulser from spectrum")
+                xp = b[np.where(h > h.max()*0.1)][-1]
+                h, b = h[np.where(b < xp-200)], b[np.where(b < xp-200)]
             bin_max = b[np.where(h == h.max())][0]
             min_ene = int(bin_max*0.95)
             max_ene = int(bin_max*1.05)
@@ -548,6 +550,7 @@ def compare_fwhm( d_out, efilter1, efilter2, efilter3, verbose=False):
     plt.xlabel("detector number", ha='right', x=1)
     plt.ylabel("FWHM (keV)", ha='right', y=1)
     plt.legend()
+    #plt.ylim((2,10)) 
     plt.savefig(f"{d_out}/FWHM_compare_{efilter1}-{efilter2}-{efilter3}.pdf")
     if verbose: plt.show(block=False)
     plt.figure(2)
@@ -557,6 +560,7 @@ def compare_fwhm( d_out, efilter1, efilter2, efilter3, verbose=False):
     plt.xlabel("detector number", ha='right', x=1)
     plt.ylabel("FWHM difference (%)", ha='right', y=1)
     plt.legend()
+    #plt.ylim((-15,15))
     plt.savefig(f"{d_out}/FWHM_diff_{efilter1}-{efilter2}.pdf")
     if verbose: plt.show()
     
