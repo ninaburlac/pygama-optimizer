@@ -114,7 +114,7 @@ def set_grid(f_grid,efilter):
         print(f"Creation of grid for {efilter} optimization")
         rises = np.linspace(1, 20, 20, dtype='float')
         flats = np.linspace(0.5, 4.5, 5, dtype='float')
-        rcs = np.linspace(150, 150, 1, dtype='float')
+        rcs = np.linspace(500, 500, 1, dtype='float')
         lists = [rises, flats, rcs]
         prod = list(itertools.product(*lists))
         df = pd.DataFrame(prod, columns=['rise','flat','rc']) 
@@ -122,7 +122,7 @@ def set_grid(f_grid,efilter):
         print(f"Creation of grid for {efilter} optimization")
         sigmas = np.linspace(1, 40, 20, dtype='float')
         flats =  np.linspace(0.5, 4.5, 5, dtype='float')
-        decays =  np.linspace(150, 150, 1, dtype='float')
+        decays =  np.linspace(500, 500, 1, dtype='float')
         lists = [sigmas, flats, decays]
         prod = list(itertools.product(*lists))
         df = pd.DataFrame(prod, columns=['sigma', 'flat','decay'])     
