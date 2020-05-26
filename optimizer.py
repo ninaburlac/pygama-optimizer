@@ -149,6 +149,7 @@ def window_ds(config, f_tier1, run):
     
     for ged in range(geds[0],geds[1]+1):
         ged = f"g{ged:0>3d}"
+        print("Detector",ged)
         count = 0
         try:
             for p, d, files in os.walk(raw_dir):
@@ -157,7 +158,7 @@ def window_ds(config, f_tier1, run):
                     if (f.endswith(".lh5")) & ("calib_raw" in f):
                         print("Opening raw file:",f)
                         f_raw = h5py.File(f"{raw_dir}/{f}",'r')
-                        if count == 20: break
+                        if count == 10: break
                         elif count == 0:
                             #cdate, ctime = f.split('run')[-1].split('-')[1], f.split('run')[-1].split('-')[2]
                             dsets = [ f_raw[ged]['raw'][col][()]  for col in cols ]
@@ -169,7 +170,10 @@ def window_ds(config, f_tier1, run):
             energies = dsets[0]
             maxe = np.amax(energies)
             h, b, v = ph.get_hist(energies, bins=3500, range=(maxe/4,maxe))
-            if int(run) is 116 or 117:
+            plt.plot(h)
+            plt.yscale("log")
+            plt.show()
+            if int(run) is 117:
                 print("run",run,"remove pulser from spectrum")
                 xp = b[np.where(h > h.max()*0.1)][-1]
                 h, b = h[np.where(b < xp-200)], b[np.where(b < xp-200)]
@@ -178,6 +182,9 @@ def window_ds(config, f_tier1, run):
             max_ene = int(bin_max*1.05)
             hist, bins, var = ph.get_hist(energies, bins=500, range=(min_ene, max_ene))
             print(ged,"Raw energy max",maxe,"histogram max",h.max(),"at",bin_max )
+            plt.plot(hist)
+            plt.yscale("log")
+            plt.show()
             
             # windowing
             for i, col in enumerate(cols):
@@ -196,7 +203,6 @@ def window_ds(config, f_tier1, run):
 def process_ds(f_grid, f_opt, f_tier1, d_out, efilter):
     """
     process the windowed raw file 'f_tier1' and create the DSP file 'f_opt'
-    
     """
     print("Grid file:",f_grid)
     df_grid = pd.read_hdf(f_grid)
