@@ -413,7 +413,7 @@ def plot_fwhm(f_grid,f_opt,d_out,efilter, verbose=False):
         data =  f[ged]['data']
         try:
             # find fwhm minimum values
-            df_grid = df_grid.loc[(df_grid[f"rchi2_{ged}"]<20)&(df_grid[f"fwhm_{ged}"]>0)]
+            df_grid = df_grid.loc[(df_grid[f"rchi2_{ged}"]<100)&(df_grid[f"fwhm_{ged}"]>0)]
             minidx = df_grid[f'fwhm_{ged}'].idxmin()
             df_min = df_grid.loc[minidx]
             #plot best result fit
