@@ -352,7 +352,6 @@ def get_fwhm(f_grid, f_opt, efilter, verbose=False):
             try:
                 xF, xF_cov = pf.fit_hist(pf.gauss_step, hE, xE, var=vE, guess=x0)
                 xF_err = np.sqrt(np.diag(xF_cov))
-                
                 # goodness of fit
                 chisq = []
                 for j, h in enumerate(hE):
@@ -363,10 +362,11 @@ def get_fwhm(f_grid, f_opt, efilter, verbose=False):
                 fwhm = xF[2] * 2.355 * 2614.5 / mu
                 fwhmerr = xF_err[2] * 2.355 * 2614.5 / mu 
                 rchi2 = sum(np.array(chisq) / len(hE))
-                
+
                 df_grid.at[i, f"fwhm_{ged}"] = fwhm
                 df_grid.at[i, f"fwhmerr_{ged}"] = fwhmerr
                 df_grid.at[i, f"rchi2_{ged}"] = rchi2
+                print(fwhm,fwhmerr,rchi2)
             except:
                 print("Fit not computed for detector",ged,"and entry",i)
                 
@@ -383,8 +383,7 @@ def get_fwhm(f_grid, f_opt, efilter, verbose=False):
                 plt.ylabel("Counts", ha='right', y=1)
                 plt.legend(loc=2, fontsize=10,title=f"FWHM = {fwhm:.2f} $\pm$ {fwhmerr:.2f} keV")
                 plt.show()
-                
-                
+                            
             # write the updated df_grid to the output file.  
             if not verbose:
                 df_grid.to_hdf(f_grid, key="pygama_optimization")
@@ -412,42 +411,45 @@ def plot_fwhm(f_grid,f_opt,d_out,efilter, verbose=False):
         except: pass
         
         data =  f[ged]['data']
-        # find fwhm minimum values
-        df_grid = df_grid.loc[(df_grid[f"rchi2_{ged}"]<20)&(df_grid[f"fwhm_{ged}"]>0)]
-        minidx = df_grid[f'fwhm_{ged}'].idxmin()
-        df_min = df_grid.loc[minidx]
-        #try:
-        #plot best result fit
-        energies = data[f"{efilter}_{minidx}"][()]
-        mean = np.mean(energies)
-        bins = 12000
-        hE, xE, vE = ph.get_hist(energies,bins,(mean/2,mean*2))
-        mu = xE[np.argmax(hE)]
-        hmax = hE[np.argmax(hE)]
-        idx = np.where(hE > hmax/2)
-        ilo, ihi = idx[0][0], idx[0][-1]
-        sig = (xE[ihi] - xE[ilo]) / 2.355
-        idx = np.where(((xE-mu) > -8 * sig) & ((xE-mu) < 8 * sig))
-        ilo, ihi = idx[0][0], idx[0][-1]
-        xE, hE, vE = xE[ilo:ihi+1], hE[ilo:ihi], vE[ilo:ihi]
-        x0 = [hmax, mu, sig, 1, 0]
-        xF, xF_cov = pf.fit_hist(pf.gauss_step, hE, xE, var=vE, guess=x0)
-        xF_err = np.sqrt(np.diag(xF_cov))
-        fwhm = xF[2] * 2.355 * 2614.5 / mu
-        fwhmerr = xF_err[2] * 2.355 * 2614.5 / mu 
-        plt.plot(xE, pf.gauss_step(xE, *xF), c='r', label='peakshape')
-        gaus, step = pf.gauss_step(xE, *xF, components=True)
-        gaus = np.array(gaus)
-        step = np.array(step)
-        plt.plot(xE, gaus, ls="--", lw=2, c='g', label="gaus")
-        plt.plot(xE, step, ls='--', lw=2, c='m', label='step + bg')
-        plt.plot(xE[1:], hE, lw=1, c='b', label=f"data {ged}")
-        plt.xlabel(f"ADC channels", ha='right', x=1)
-        plt.ylabel("Counts", ha='right', y=1)
-        plt.legend(loc=2, fontsize=10,title=f"FWHM = {fwhm:.2f} $\pm$ {fwhmerr:.2f} keV")
-        plt.savefig(f"{d_det}/Fit_{ged}-{efilter}.pdf")
-        plt.cla()
-        #except: continue
+        try:
+            # find fwhm minimum values
+            df_grid = df_grid.loc[(df_grid[f"rchi2_{ged}"]<20)&(df_grid[f"fwhm_{ged}"]>0)]
+            minidx = df_grid[f'fwhm_{ged}'].idxmin()
+            df_min = df_grid.loc[minidx]
+            #plot best result fit
+            energies = data[f"{efilter}_{minidx}"][()]
+            mean = np.mean(energies)
+            bins = 12000
+            hE, xE, vE = ph.get_hist(energies,bins,(mean/2,mean*2))
+            mu = xE[np.argmax(hE)]
+            hmax = hE[np.argmax(hE)]
+            idx = np.where(hE > hmax/2)
+            ilo, ihi = idx[0][0], idx[0][-1]
+            sig = (xE[ihi] - xE[ilo]) / 2.355
+            idx = np.where(((xE-mu) > -8 * sig) & ((xE-mu) < 8 * sig))
+            ilo, ihi = idx[0][0], idx[0][-1]
+            xE, hE, vE = xE[ilo:ihi+1], hE[ilo:ihi], vE[ilo:ihi]
+            x0 = [hmax, mu, sig, 1, 0]
+            xF, xF_cov = pf.fit_hist(pf.gauss_step, hE, xE, var=vE, guess=x0)
+            xF_err = np.sqrt(np.diag(xF_cov))
+            fwhm = xF[2] * 2.355 * 2614.5 / mu
+            fwhmerr = xF_err[2] * 2.355 * 2614.5 / mu 
+            plt.plot(xE, pf.gauss_step(xE, *xF), c='r', label='peakshape')
+            gaus, step = pf.gauss_step(xE, *xF, components=True)
+            gaus = np.array(gaus)
+            step = np.array(step)
+            plt.plot(xE, gaus, ls="--", lw=2, c='g', label="gaus")
+            plt.plot(xE, step, ls='--', lw=2, c='m', label='step + bg')
+            plt.plot(xE[1:], hE, lw=1, c='b', label=f"data {ged}")
+            plt.xlabel(f"ADC channels", ha='right', x=1)
+            plt.ylabel("Counts", ha='right', y=1)
+            plt.legend(loc=2, fontsize=10,title=f"FWHM = {fwhm:.2f} $\pm$ {fwhmerr:.2f} keV")
+            plt.savefig(f"{d_det}/Fit_{ged}-{efilter}.pdf")
+            plt.cla()
+        except:
+            print("FWHM minimum not find for detector",ged)
+            continue
+
         if efilter=='zacE' or efilter=='cuspE':
             #try:
             sigma, flat, decay = df_min[:3]
