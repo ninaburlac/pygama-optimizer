@@ -16,6 +16,6 @@ unset __conda_setup
 
 source /lfs/l1/legend/users/dandrea/zac/MJsetup.sh
 
-python /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer.py -r 116 -w -d /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer > /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/_outs/optimizer_116_wind.out
+
 python /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/optimizer.py -r 116 -c 0 -g -p -f -t -d /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer > /lfs/l1/legend/users/dandrea/pygama/pygama-optimizer/_outs/optimizer_116_0.out
 
